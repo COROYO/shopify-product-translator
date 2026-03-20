@@ -9,7 +9,6 @@ export function ScAnalytics() {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // Check local storage for consent on mount
     const timeout = setTimeout(() => {
       setIsMounted(true);
       const consent = localStorage.getItem("sc-cookie-consent");
@@ -42,9 +41,9 @@ export function ScAnalytics() {
         <>
           <Script
             src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID || "G-1ZRZRETPF8"}`}
-            strategy="afterInteractive"
+            strategy="lazyOnload"
           />
-          <Script id="sc-google-analytics" strategy="afterInteractive">
+          <Script id="sc-google-analytics" strategy="lazyOnload">
             {`
               window.dataLayer = window.dataLayer || [];
               function gtag(){window.dataLayer.push(arguments);}

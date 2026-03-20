@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { ScAnalytics } from "@/components/sc-analytics";
@@ -12,6 +12,15 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Shopify Translator",
   description: "Translate your Shopify products with ease",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f4f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#121212" },
+  ],
 };
 
 export default function RootLayout({
