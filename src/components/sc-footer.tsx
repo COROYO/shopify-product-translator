@@ -42,7 +42,14 @@ export function ScFooter() {
         </a>
         <span className="hidden md:inline sc-text-border">|</span>
         <span className="sc-text-muted-foreground">
-          v{process.env.NEXT_PUBLIC_APP_VERSION}
+          <a
+            href="https://www.shrimpwelfareproject.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:sc-text-foreground sc-transition-colors"
+          >
+            Shrimp Welfare Project 🦐
+          </a>
         </span>
       </div>
     </footer>
