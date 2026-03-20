@@ -221,7 +221,7 @@ export function ScTranslationTable({
       const result = await aiTranslate(
         item.sourceValue,
         targetLocale,
-        aiSettings.provider
+        aiSettings.provider,
       );
       handleValueChange(index, result);
     } catch (err: unknown) {
@@ -420,15 +420,14 @@ export function ScTranslationTable({
           >
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          {/*
+
           <button
+            disabled
             onClick={() => setIsAiModalOpen(true)}
             className="sc-flex sc-items-center sc-gap-2 sc-rounded-md sc-bg-gray-100 dark:sc-bg-gray-700 sc-px-3 sc-py-2 sc-text-sm sc-font-medium sc-text-gray-700 dark:sc-text-gray-300 hover:sc-bg-gray-200 dark:hover:sc-bg-gray-600"
           >
-            <Settings size={16} />
-            AI Settings
+            <Settings size={16} />✨ AI Settings (coming soon)
           </button>
-          */}
         </div>
       </div>
 
