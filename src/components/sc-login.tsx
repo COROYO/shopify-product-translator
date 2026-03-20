@@ -59,7 +59,7 @@ export function ScLogin({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!domain || !token) return;
-    
+
     setError(null);
     setIsLoading(true);
 
@@ -68,11 +68,11 @@ export function ScLogin({
 
     try {
       await loginAction(cleanDomain, token);
-      
+
       if (onLogin) {
         onLogin({ domain: cleanDomain });
       }
-      
+
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
@@ -81,10 +81,16 @@ export function ScLogin({
   };
 
   return (
-    <div className="sc-flex sc-h-screen sc-w-full sc-items-center sc-justify-center sc-bg-gray-50 dark:sc-bg-gray-900">
+    <div
+      role="main"
+      aria-label="Login"
+      className="sc-flex sc-h-screen sc-w-full sc-items-center sc-justify-center sc-bg-gray-50 dark:sc-bg-gray-900"
+    >
       <div className="sc-w-full sc-max-w-md sc-rounded-lg sc-bg-white dark:sc-bg-gray-800 sc-p-8 sc-shadow-md">
         <div className="sc-mb-6 sc-flex sc-items-center sc-justify-between">
-          <h1 className="sc-text-2xl sc-font-bold sc-text-gray-900 dark:sc-text-white">Shopify Translator</h1>
+          <h1 className="sc-text-2xl sc-font-bold sc-text-gray-900 dark:sc-text-white">
+            Shopify Translator
+          </h1>
           <button
             onClick={toggleTheme}
             type="button"
@@ -94,10 +100,12 @@ export function ScLogin({
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </button>
         </div>
-        
+
         {error && (
           <div className="sc-mb-4 sc-rounded-md sc-bg-red-50 sc-p-4 dark:sc-bg-red-900/50">
-            <p className="sc-text-sm sc-text-red-800 dark:sc-text-red-200">{error}</p>
+            <p className="sc-text-sm sc-text-red-800 dark:sc-text-red-200">
+              {error}
+            </p>
           </div>
         )}
 
@@ -142,7 +150,9 @@ export function ScLogin({
             type="submit"
             disabled={isLoading}
             className={`sc-mt-4 sc-w-full sc-rounded-md sc-p-2 sc-text-white sc-font-medium focus:sc-outline-none focus:sc-ring-2 focus:sc-ring-blue-500 focus:sc-ring-offset-2 ${
-              isLoading ? "sc-bg-blue-400 sc-cursor-not-allowed" : "sc-bg-blue-600 hover:sc-bg-blue-700"
+              isLoading
+                ? "sc-bg-blue-400 sc-cursor-not-allowed"
+                : "sc-bg-blue-600 hover:sc-bg-blue-700"
             }`}
           >
             {isLoading ? "Connecting..." : "Connect"}
