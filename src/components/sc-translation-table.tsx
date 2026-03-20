@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ScCredentials } from "./sc-login";
 import {
   shopifyRequest,
@@ -11,6 +11,9 @@ import {
 import { ScAiSettingsModal, AiSettings } from "./sc-ai-settings-modal";
 import { aiTranslate } from "@/lib/ai-translate";
 import { Settings, Bot, ChevronDown, ChevronUp, Moon, Sun } from "lucide-react";
+import DOMPurify from "dompurify";
+import { ScRichTextEditor } from "./sc-rich-text-editor";
+import { trackScEvent } from "@/lib/sc-tracking";
 
 interface Locale {
   locale: string;
@@ -55,11 +58,18 @@ export function ScTranslationTable({
 
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
 
+  /** Field ids last filled via AI; cleared on manual edit or new product fetch. */
+  const aiFilledFieldIdsRef = useRef<Set<string>>(new Set());
+
   const toggleProduct = (resourceId: string) => {
     setExpandedProducts((prev) => {
       const next = new Set(prev);
-      if (next.has(resourceId)) next.delete(resourceId);
-      else next.add(resourceId);
+      if (next.has(resourceId)) {
+        next.delete(resourceId);
+      } else {
+        trackScEvent("product_expanded");
+        next.add(resourceId);
+      }
       return next;
     });
   };
@@ -107,6 +117,7 @@ export function ScTranslationTable({
     setTheme(nextTheme);
     localStorage.setItem("sc-theme", nextTheme);
     applyTheme(nextTheme);
+    trackScEvent("theme_toggled", { theme: nextTheme });
   };
 
   useEffect(() => {
@@ -185,6 +196,7 @@ export function ScTranslationTable({
       );
 
       setItems(parsedItems);
+      aiFilledFieldIdsRef.current.clear();
       setHasNextPage(pageInfo.hasNextPage);
       setCursor(pageInfo.endCursor);
 
@@ -201,10 +213,22 @@ export function ScTranslationTable({
     }
   };
 
-  const handleValueChange = (index: number, val: string) => {
+  const handleValueChange = (
+    index: number,
+    val: string,
+    fromAi: boolean = false,
+  ) => {
     const newItems = [...items];
-    newItems[index].targetValue = val;
+    const row = newItems[index];
+    if (!row) return;
+    newItems[index] = { ...row, targetValue: val };
     setItems(newItems);
+    const fieldId = `${row.resourceId}-${row.key}`;
+    if (fromAi) {
+      aiFilledFieldIdsRef.current.add(fieldId);
+    } else {
+      aiFilledFieldIdsRef.current.delete(fieldId);
+    }
   };
 
   const [translatingId, setTranslatingId] = useState<string | null>(null);
@@ -216,6 +240,11 @@ export function ScTranslationTable({
       return;
     }
 
+    trackScEvent("ai_translation_triggered", {
+      provider: aiSettings.provider,
+      field: item.key,
+    });
+
     setTranslatingId(`${item.resourceId}-${item.key}`);
     try {
       const result = await aiTranslate(
@@ -223,9 +252,13 @@ export function ScTranslationTable({
         targetLocale,
         aiSettings.provider,
       );
-      handleValueChange(index, result);
+      handleValueChange(index, result, true);
     } catch (err: unknown) {
       console.error(err);
+      trackScEvent("error_ai_translation", {
+        provider: aiSettings.provider,
+        error_kind: err instanceof Error ? err.name : "unknown",
+      });
       alert(
         "Translation failed: " +
           (err instanceof Error ? err.message : String(err)),
@@ -256,11 +289,29 @@ export function ScTranslationTable({
       );
       const userErrors = data.translationsRegister?.userErrors || [];
       if (userErrors.length > 0) {
+        trackScEvent("error_shopify_save", {
+          error_kind: "user_errors",
+          error_count: userErrors.length,
+        });
         alert(
           "Error: " +
             userErrors.map((e: { message: string }) => e.message).join(", "),
         );
       } else {
+        const fieldId = `${item.resourceId}-${item.key}`;
+        const method = aiFilledFieldIdsRef.current.has(fieldId)
+          ? "ai"
+          : "manual";
+        const translation_state =
+          item.originalTargetValue === "" ? "new" : "update";
+        trackScEvent("translation_saved", {
+          method,
+          field: item.key,
+          locale: targetLocale,
+          translation_state,
+        });
+        aiFilledFieldIdsRef.current.delete(fieldId);
+
         // Update original to match new
         const newItems = items.map((i) => {
           if (i.resourceId === item.resourceId && i.key === item.key) {
@@ -272,6 +323,10 @@ export function ScTranslationTable({
       }
     } catch (err) {
       console.error(err);
+      trackScEvent("error_shopify_save", {
+        error_kind: "exception",
+        error_name: err instanceof Error ? err.name : "unknown",
+      });
       alert("Failed to save translation");
     } finally {
       setSavingId(null);
@@ -347,18 +402,35 @@ export function ScTranslationTable({
           )}
         </td>
         <td className="sc-px-6 sc-py-4 sc-text-sm sc-text-gray-500 dark:sc-text-gray-400 sc-align-top">
-          <div className="sc-max-h-32 sc-overflow-y-auto sc-whitespace-pre-wrap">
-            {item.sourceValue}
-          </div>
+          {item.key === "body_html" ? (
+            <div
+              className="sc-html-source-preview sc-max-h-48 sc-overflow-y-auto [&_p]:sc-mb-2 [&_p:last-child]:sc-mb-0 [&_ul]:sc-list-disc [&_ul]:sc-pl-5 [&_ol]:sc-list-decimal [&_ol]:sc-pl-5 [&_a]:sc-text-blue-500 dark:[&_a]:sc-text-blue-400 [&_strong]:sc-font-semibold"
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(item.sourceValue || ""),
+              }}
+            />
+          ) : (
+            <div className="sc-max-h-32 sc-overflow-y-auto sc-whitespace-pre-wrap">
+              {item.sourceValue}
+            </div>
+          )}
         </td>
         <td className="sc-px-6 sc-py-4 sc-relative sc-align-top">
           <div className="sc-flex sc-items-start sc-gap-2">
-            <textarea
-              className="sc-w-full sc-rounded-md sc-border sc-border-gray-300 dark:sc-border-gray-600 dark:sc-bg-gray-700 dark:sc-text-white sc-p-2 focus:sc-border-blue-500 focus:sc-ring-blue-500 sm:sc-text-sm sc-min-h-[80px]"
-              value={item.targetValue}
-              onChange={(e) => handleValueChange(idx, e.target.value)}
-              disabled={isTranslating}
-            />
+            {item.key === "body_html" ? (
+              <ScRichTextEditor
+                value={item.targetValue}
+                onChange={(html) => handleValueChange(idx, html)}
+                disabled={isTranslating}
+              />
+            ) : (
+              <textarea
+                className="sc-w-full sc-rounded-md sc-border sc-border-gray-300 dark:sc-border-gray-600 dark:sc-bg-gray-700 dark:sc-text-white sc-p-2 focus:sc-border-blue-500 focus:sc-ring-blue-500 sm:sc-text-sm sc-min-h-[80px]"
+                value={item.targetValue}
+                onChange={(e) => handleValueChange(idx, e.target.value)}
+                disabled={isTranslating}
+              />
+            )}
             {aiSettings.provider !== "none" && (
               <button
                 onClick={() => handleAutoTranslate(idx, item)}
@@ -402,7 +474,11 @@ export function ScTranslationTable({
           </label>
           <select
             value={targetLocale}
-            onChange={(e) => setTargetLocale(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              trackScEvent("target_language_selected", { locale: next });
+              setTargetLocale(next);
+            }}
             className="sc-mt-1 sc-block sc-w-48 sc-rounded-md sc-border-gray-300 dark:sc-border-gray-600 dark:sc-bg-gray-700 dark:sc-text-white sc-py-2 sc-pl-3 sc-pr-10 sc-text-base focus:sc-border-blue-500 focus:sc-outline-none focus:sc-ring-blue-500 sm:sc-text-sm"
           >
             {locales.map((l) => (
@@ -525,6 +601,7 @@ export function ScTranslationTable({
           <div className="sc-flex-1 sc-flex sc-justify-between">
             <button
               onClick={() => {
+                trackScEvent("pagination_used", { direction: "previous" });
                 if (history.length > 1) {
                   const newHistory = [...history];
                   newHistory.pop(); // remove current
@@ -542,7 +619,10 @@ export function ScTranslationTable({
               Previous
             </button>
             <button
-              onClick={() => fetchProducts(cursor)}
+              onClick={() => {
+                trackScEvent("pagination_used", { direction: "next" });
+                fetchProducts(cursor);
+              }}
               disabled={!hasNextPage}
               className="sc-relative sc-inline-flex sc-items-center sc-px-4 sc-py-2 sc-border sc-border-gray-300 dark:sc-border-gray-600 sc-text-sm sc-font-medium sc-rounded-md sc-text-gray-700 dark:sc-text-gray-300 sc-bg-white dark:sc-bg-gray-800 hover:sc-bg-gray-50 dark:hover:sc-bg-gray-700 disabled:sc-bg-gray-100 dark:disabled:sc-bg-gray-900 disabled:sc-text-gray-400 dark:disabled:sc-text-gray-600"
             >

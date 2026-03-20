@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { saveAiSettingsAction } from "@/app/actions";
+import { trackScEvent } from "@/lib/sc-tracking";
 
 export interface AiSettings {
   provider: "openai" | "gemini" | "none";
@@ -40,6 +41,7 @@ export function ScAiSettingsModal({ isOpen, onClose, onSave }: Props) {
     try {
       localStorage.setItem("sc-ai-provider-remember", provider);
       await saveAiSettingsAction(provider, apiKey);
+      trackScEvent("ai_settings_saved", { provider });
       onSave({ provider, apiKey });
       onClose();
     } catch (err) {
