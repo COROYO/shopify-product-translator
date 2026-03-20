@@ -1,20 +1,23 @@
+version: "3.3"
+
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: translate-product-app
-    container_name: translate-product-app
+    image: product-translator-app
+    container_name: product-translator-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Port 3000 wird an Plesk weitergegeben.
+      # Richte in Plesk unter "product-translator.shrymp.de"
+      # eine Docker Proxy Regel auf diesen Port ein.
+      - "127.0.0.1:3000:3000"
     environment:
       - NODE_ENV=production
-      # Hier kannst du deine Umgebungsvariablen definieren, die in der .env Datei stehen
-      # z.B.
+      - NEXT_PUBLIC_SITE_URL=https://product-translator.shrymp.de
       # - NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=${NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN}
       # - SHOPIFY_ADMIN_ACCESS_TOKEN=${SHOPIFY_ADMIN_ACCESS_TOKEN}
       # - OPENAI_API_KEY=${OPENAI_API_KEY}
-    # Optional: Wenn du eine .env Datei verwenden möchtest
     # env_file:
     #   - .env
