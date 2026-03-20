@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
+import { ScAnalytics } from "@/components/sc-analytics";
 
 const montserrat = Montserrat({
   variable: "--sc-font-montserrat",
@@ -20,11 +21,12 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="de"
       className={`${montserrat.variable} sc-h-full sc-antialiased`}
     >
       <body className="sc-min-h-full sc-flex sc-flex-col sc-font-sans sc-bg-background sc-text-foreground">
         {children}
+        <ScAnalytics />
       </body>
     </html>
   );
