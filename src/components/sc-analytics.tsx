@@ -58,6 +58,7 @@ export function ScAnalytics() {
       {showBanner && (
         <div
           role="dialog"
+          aria-label="Cookie Banner"
           aria-modal="true"
           aria-labelledby="sc-cookie-banner-title"
           id="sc-cookie-banner"
