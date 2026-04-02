@@ -1,9 +1,7 @@
 version: "3.3"
 
-name: translate-product.shrymp.de
-
 services:
-  app:
+  translator_app:
     build:
       context: .
       dockerfile: Dockerfile
